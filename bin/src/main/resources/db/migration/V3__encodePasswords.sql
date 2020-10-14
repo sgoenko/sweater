@@ -1,0 +1,1 @@
+UPDATE usr SET password='$2a$08$T0yNCf3Nx9yjcG5qffwTxOr4TaO4s4S9kQkjSHAW1jM8Rp50IzTfK' WHERE id ='1';
