@@ -28,9 +28,14 @@
                         <a class="col btn btn-outline-primary" href="/user-messages/${message.author.id}?message=${message.id}">
                             Edit
                         </a>
-                        <a class="col btn btn-outline-dark" href="/delete-message?message=${message.id}">
-                            Del
-                        </a>
+                    </#if>
+                    <#if message.author.id == currentUserId || isAdmin>
+					    <div class="col">
+					        <form class="form-inline" method="post" action="/delete-message/${message.id}">
+					            <button type="submit" class="btn btn-outline-dark">X</button>
+					            <input type="hidden" name="_csrf" value="${_csrf.token}" />
+					        </form>
+					    </div>
                     </#if>
                 </div>
             </div>

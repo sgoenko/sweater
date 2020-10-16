@@ -83,30 +83,10 @@ public class MessageController {
 
 			messageService.save(message);
 		}
-		
-//		Iterable<Message> messages = messageRepo.findAll();
-//		model.addAttribute("messages", messages);
 
 		return "redirect:/main";
 	}
 
-	private void saveFile(Message message, MultipartFile file) throws IOException {
-		if (file != null && !file.getOriginalFilename().isEmpty()) {
-			File uploadDir = new File(uploadPath);
-
-			if (!uploadDir.exists()) {
-				uploadDir.mkdir();
-			}
-
-			String uuidFile = UUID.randomUUID().toString();
-			String resultFilename = uuidFile + "." + file.getOriginalFilename();
-
-			file.transferTo(new File(uploadPath + "/" + resultFilename));
-
-			message.setFilename(resultFilename);
-		}
-	}
-	
 	@GetMapping("/user-messages/{author}")
 	public String userMessages(
 			@AuthenticationPrincipal User user,
@@ -158,13 +138,14 @@ public class MessageController {
 		return "redirect:/user-messages/" + user;
 	}
 
-	@GetMapping("/delete-message")
+	@PostMapping("/delete-message/{message}")
 	public String deleteMessage(
-			@RequestParam Message message,
+			@PathVariable Message message,
 			RedirectAttributes redirectAttributes,
 			@RequestHeader(required = false) String referer
 	) {
 		messageService.delete(message);
+		deleteFile(message.getFilename());
 
 		UriComponents components = UriComponentsBuilder.fromHttpUrl(referer).build();
 		
@@ -199,4 +180,26 @@ public class MessageController {
 		return "redirect:" + components.getPath();
 	}
 
+	private void saveFile(Message message, MultipartFile file) throws IOException {
+		if (file != null && !file.getOriginalFilename().isEmpty()) {
+			File uploadDir = new File(uploadPath);
+
+			if (!uploadDir.exists()) {
+				uploadDir.mkdir();
+			}
+
+			String uuidFile = UUID.randomUUID().toString();
+			String resultFilename = uuidFile + "." + file.getOriginalFilename();
+
+			file.transferTo(new File(uploadPath + "/" + resultFilename));
+
+			message.setFilename(resultFilename);
+		}
+	}
+
+	private void deleteFile(String filename) {
+		File file = new File(uploadPath + "/" + filename);
+        file.delete();
+	}
+	
 }
