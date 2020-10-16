@@ -24,7 +24,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.hay.sweater.domain.Message;
 import com.hay.sweater.domain.User;
 import com.hay.sweater.domain.dto.MessageDto;
-import com.hay.sweater.repository.MessageRepo;
 import com.hay.sweater.service.MessageService;
 
 import java.io.File;
@@ -36,9 +35,6 @@ import javax.validation.Valid;
 
 @Controller
 public class MessageController {
-	@Autowired
-	private MessageRepo messageRepo;
-	
 	@Autowired
 	private MessageService messageService;
 
@@ -68,13 +64,13 @@ public class MessageController {
 
 	@PostMapping("/main")
 	public String add(
-			@AuthenticationPrincipal User user, 
+			@AuthenticationPrincipal User currentUser, 
 			@Valid Message message, 
 			BindingResult bindingResult,
 			Model model, 
 			@RequestParam("file") MultipartFile file
 	) throws IllegalStateException, IOException {
-		message.setAuthor(user);
+		message.setAuthor(currentUser);
 
 		if (bindingResult.hasErrors()) {
 			Map<String, String> errorsMap = ControllerUtils.getErrors(bindingResult);
@@ -82,17 +78,14 @@ public class MessageController {
             model.mergeAttributes(errorsMap);
             model.addAttribute("message", message);
 		} else {
-
 			saveFile(message, file);
-			
 			model.addAttribute("message", null);
-			
-			messageRepo.save(message);
+
+			messageService.save(message);
 		}
 		
-		Iterable<Message> messages = messageRepo.findAll();
-
-		model.addAttribute("messages", messages);
+//		Iterable<Message> messages = messageRepo.findAll();
+//		model.addAttribute("messages", messages);
 
 		return "redirect:/main";
 	}
@@ -116,22 +109,22 @@ public class MessageController {
 	
 	@GetMapping("/user-messages/{author}")
 	public String userMessages(
-			@AuthenticationPrincipal User currentUser,
+			@AuthenticationPrincipal User user,
 			@PathVariable User author,
 			Model model,
 			@RequestParam(required = false) Message message,
 			@PageableDefault(sort = { "id" }, direction = Direction.DESC) Pageable pageable
 
 	) {
-		Page<MessageDto> page = messageService.messageListForUser(pageable, author, currentUser);
+		Page<MessageDto> page = messageService.messageListForUser(pageable, author, user);
 			
 		model.addAttribute("userChannel", author);
 		model.addAttribute("subscriptionsCount", author.getSubscriptions().size());
 		model.addAttribute("subscribersCount", author.getSubscribers().size());
-		model.addAttribute("isSubscriber", author.getSubscribers().contains(currentUser) );
+		model.addAttribute("isSubscriber", author.getSubscribers().contains(user) );
 		model.addAttribute("page", page);
 		model.addAttribute("message", message);
-		model.addAttribute("isCurrentUser", currentUser.equals(author));
+		model.addAttribute("isCurrentUser", user.equals(author));
 		model.addAttribute("url", "/user-messages/"+author.getId());
 		
 		return "userMessages";
@@ -159,25 +152,42 @@ public class MessageController {
 			}
 			
 			saveFile(message, file);
-			messageRepo.save(message);
+			messageService.save(message);
 		}
 		
 		return "redirect:/user-messages/" + user;
 	}
+
+	@GetMapping("/delete-message")
+	public String deleteMessage(
+			@RequestParam Message message,
+			RedirectAttributes redirectAttributes,
+			@RequestHeader(required = false) String referer
+	) {
+		messageService.delete(message);
+
+		UriComponents components = UriComponentsBuilder.fromHttpUrl(referer).build();
+		
+		components.getQueryParams()
+			.entrySet()
+			.forEach(pair -> redirectAttributes.addAttribute(pair.getKey(), pair.getValue()));
+			
+		return "redirect:" + components.getPath();
+	}
 	
 	@GetMapping("/messages/{message}/like")
 	public String like(
-			@AuthenticationPrincipal User currentUser,
+			@AuthenticationPrincipal User user,
 			@PathVariable Message message,
 			RedirectAttributes redirectAttributes,
 			@RequestHeader(required = false) String referer
 	) {
 		Set<User> likes = message.getLikes();
 		
-		if (likes.contains(currentUser)) {
-			likes.remove(currentUser);
+		if (likes.contains(user)) {
+			likes.remove(user);
 		} else {
-			likes.add(currentUser);
+			likes.add(user);
 		}
 		
 		UriComponents components = UriComponentsBuilder.fromHttpUrl(referer).build();

@@ -25,8 +25,11 @@
                         ${message.likes}
                     </a>
                     <#if message.author.id == currentUserId>
-                        <a class="col btn btn-primary" href="/user-messages/${message.author.id}?message=${message.id}">
+                        <a class="col btn btn-outline-primary" href="/user-messages/${message.author.id}?message=${message.id}">
                             Edit
+                        </a>
+                        <a class="col btn btn-outline-dark" href="/delete-message?message=${message.id}">
+                            Del
                         </a>
                     </#if>
                 </div>
